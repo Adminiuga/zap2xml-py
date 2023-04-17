@@ -37,6 +37,9 @@ def get_args():
       epilog='This tool is noisy to stdout; '
           'with cron use chronic from moreutils.')
   parser.add_argument(
+      '-C', '--cache-folder', dest='cache_folder', type=str,
+      help=f'Cache folder location. Defaults to ~/.cache/zap2xml/')
+  parser.add_argument(
       '--aid', dest='zap_aid', type=str, default='gapzap',
       help='Raw zap2it input parameter.  (Affiliate ID?)')
   parser.add_argument(
@@ -125,11 +128,15 @@ def sub_el(parent, name, text=None, **kwargs):
 
 
 def main():
-  cache_dir = pathlib.Path(__file__).parent.joinpath('cache')
+  args = get_args()
+  if args.cache_folder is None:
+    cache_dir = pathlib.Path('~/.cache/zap2xml').expanduser().resolve()
+  else:
+    cache_dir = pathlib.Path(args.cache_folder).expanduser().resolve()
+
   if not cache_dir.is_dir():
     cache_dir.mkdir()
 
-  args = get_args()
   base_qs = {k[4:]: v for (k, v) in vars(args).items() if k.startswith('zap_')}
   done_channels = False
   err = 0
