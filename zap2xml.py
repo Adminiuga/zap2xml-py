@@ -75,6 +75,9 @@ def get_args():
   parser.add_argument(
       '-z', '--zip', '--postal', dest='zap_postalCode', type=str, required=True,
       help='The zip/postal code identifying the listings to fetch.')
+  parser.add_argument(
+      '-o', '--output', dest='output_file', type=str, default='./xmltv.xml',
+      help='output filename')
   return parser.parse_args()
 
 
@@ -228,8 +231,8 @@ def main():
         for f in event['filter']:
           sub_el(prog_out, 'genre', lang='en', text=f[7:])
 
-  out_path = pathlib.Path(__file__).parent.joinpath('xmltv.xml')
-  with open(out_path.absolute(), 'wb') as f:
+  out_path = pathlib.Path(args.output_file)
+  with open(out_path.expanduser().absolute(), 'wb') as f:
     f.write(b'<?xml version="1.0" encoding="UTF-8"?>\n')
     f.write(ET.tostring(out, encoding='UTF-8'))
 
