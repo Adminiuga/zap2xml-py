@@ -72,6 +72,9 @@ def get_args():
   parser.add_argument(
       '-z', '--zip', '--postal', dest='zap_postalCode', type=str, required=True,
       help='The zip/postal code identifying the listings to fetch.')
+  parser.add_argument(
+      '--days', dest='fetch_days', type=int, default=7, choices=range(1, 15), 
+      help='Number of days to fetch. Default: 7 days')
   return parser.parse_args()
 
 
@@ -149,7 +152,7 @@ def main():
   out.set('generator-info-url', 'github.com/arantius/zap2xml-py')
 
   # Fetch data in `zap_timespan` chunks.
-  for i in range(int(7 * 24 / args.zap_timespan)):
+  for i in range(int(args.fetch_days * 24 / args.zap_timespan)):
     i_time = zap_time + (i * zap_time_window)
     i_dt = datetime.datetime.fromtimestamp(i_time)
     print('Getting data for', i_dt.isoformat())
