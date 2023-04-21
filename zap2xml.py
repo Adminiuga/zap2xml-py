@@ -152,10 +152,10 @@ def main():
   err = 0
   # Start time parameter is now rounded down to nearest `zap_timespan`, in s.
   zap_time = time.mktime(time.localtime())
-  LOGGER.info('Local time:    ', zap_time)
+  LOGGER.info('Local time: %s', zap_time)
   zap_time_window = args.zap_timespan * 3600
   zap_time = int(zap_time - (zap_time % zap_time_window))
-  LOGGER.info('First zap time:', zap_time)
+  LOGGER.info('First zap time: %s', zap_time)
 
   remove_stale_cache(cache_dir, zap_time)
 
