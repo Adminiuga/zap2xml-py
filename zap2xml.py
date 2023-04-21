@@ -22,20 +22,32 @@ Written to have only standard library dependencies.
 
 import argparse
 import datetime
+import enum
 import json
 import pathlib
 import sys
 import time
 import urllib.parse
 import urllib.request
+import logging
 import xml.etree.ElementTree as ET
+
+
+LOGGER = logging.getLogger(__name__)
+
+class LogLevels(enum.IntEnum):
+  FATAL = logging.FATAL
+  CRITICAL = logging.CRITICAL
+  ERROR = logging.ERROR
+  WARNING = logging.WARNING
+  INFO = logging.INFO
+  DEBUG = logging.DEBUG
 
 
 def get_args():
   parser = argparse.ArgumentParser(
       description='Fetch TV data from zap2it.',
-      epilog='This tool is noisy to stdout; '
-          'with cron use chronic from moreutils.')
+  )
   parser.add_argument(
       '--aid', dest='zap_aid', type=str, default='gapzap',
       help='Raw zap2it input parameter.  (Affiliate ID?)')
@@ -71,24 +83,27 @@ def get_args():
       help='Raw zap2it input parameter.  (?)')
   parser.add_argument(
       '-z', '--zip', '--postal', dest='zap_postalCode', type=str, required=True,
-      help='The zip/postal code identifying the listings to fetch.')
+      help='The zip/postal code identifying the listings to fetch.'),
+  parser.add_argument(
+      '-l', '--log-level', dest='log_level', type=str, default="WARNING", choices=[l.name for l in LogLevels],
+      help='The logging level, default to WARNING.'),
   return parser.parse_args()
 
 
 def get_cached(cache_dir, cache_key, delay, url):
   cache_path = cache_dir.joinpath(cache_key)
   if cache_path.is_file():
-    print('FROM CACHE:', url)
+    ('FROM CACHE:', url)
     with open(cache_path, 'rb') as f:
       return f.read()
   else:
-    print('Fetching:  ', url)
+    LOGGER.info('Fetching: %s', url)
     try:
       resp = urllib.request.urlopen(url)
       result = resp.read()
     except urllib.error.HTTPError as e:
       if e.code == 400:
-        print('Got a 400 error!  Ignoring it.')
+        LOGGER.warning('Got a 400 error!  Ignoring it.')
         result = (
             b'{'
             b'"note": "Got a 400 error at this time, skipping.",'
@@ -109,7 +124,7 @@ def remove_stale_cache(cache_dir, zap_time):
       if t >= zap_time: continue
     except:
       pass
-    print('Removing stale cache file:', p.name)
+    LOGGER.info('Removing stale cache file:', p.name)
     p.unlink()
 
 
@@ -130,15 +145,17 @@ def main():
     cache_dir.mkdir()
 
   args = get_args()
+  logging.basicConfig(level=LogLevels[args.log_level])
+
   base_qs = {k[4:]: v for (k, v) in vars(args).items() if k.startswith('zap_')}
   done_channels = False
   err = 0
   # Start time parameter is now rounded down to nearest `zap_timespan`, in s.
   zap_time = time.mktime(time.localtime())
-  print('Local time:    ', zap_time)
+  LOGGER.info('Local time:    ', zap_time)
   zap_time_window = args.zap_timespan * 3600
   zap_time = int(zap_time - (zap_time % zap_time_window))
-  print('First zap time:', zap_time)
+  LOGGER.info('First zap time:', zap_time)
 
   remove_stale_cache(cache_dir, zap_time)
 
@@ -152,7 +169,7 @@ def main():
   for i in range(int(7 * 24 / args.zap_timespan)):
     i_time = zap_time + (i * zap_time_window)
     i_dt = datetime.datetime.fromtimestamp(i_time)
-    print('Getting data for', i_dt.isoformat())
+    LOGGER.info('Getting data for %s', i_dt.isoformat())
 
     qs = base_qs.copy()
     qs['lineupId'] = '%s-%s-DEFAULT' % (args.zap_country, args.zap_headendId)
